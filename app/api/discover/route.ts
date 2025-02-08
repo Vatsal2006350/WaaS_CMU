@@ -1,6 +1,4 @@
-// app/api/discover/route.ts
-
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
@@ -16,18 +14,24 @@ export async function POST(request: Request) {
     }
 
     // 2) Build the request payload for Perplexity
-    //    This is just an example—tweak as you like
+    //    We enhance the user content to ask for logos, top 5, etc.
     const body = {
       model: "sonar", // or "sonar-pro", etc.
       messages: [
-        { role: "system", content: "Be precise and concise." },
+        {
+          role: "system",
+          content: "You are a concise AI. Format output in Markdown.",
+        },
         {
           role: "user",
-          content: `We are "${companyName}" offering: "${description}". 
-                    Please analyze top TikTok ads in our niche.`,
+          content: `
+We are "${companyName}" offering: "${description}".
+Provide **5 top companies** that are currently **viral** in the general category of our product and the company description.
+Use headings, bullet points, or bold styling in Markdown.
+          `,
         },
       ],
-      max_tokens: 200,
+      max_tokens: 1000,
       temperature: 0.2,
       top_p: 0.9,
       search_domain_filter: null,
@@ -46,7 +50,6 @@ export async function POST(request: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Must be in the form: Bearer <YourKey>
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(body),
@@ -70,6 +73,9 @@ export async function POST(request: Request) {
     return NextResponse.json(data);
   } catch (err) {
     console.error("Error in /api/discover route:", err);
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
   }
 }
