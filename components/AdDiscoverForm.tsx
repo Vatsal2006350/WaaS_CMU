@@ -92,7 +92,7 @@ export function AdDiscoveryForm() {
     ]);
 
     try {
-      const response = await fetch("https://35565442dd3e9a.lhr.life/scrape", {
+      const response = await fetch("http://localhost:8000", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
