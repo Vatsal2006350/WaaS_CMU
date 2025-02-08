@@ -31,6 +31,7 @@ interface CompanyData {
   selected?: boolean;
   /** The short "Category" line extracted from the first line of the response (e.g. "Productivity app") */
   shortDescription?: string;
+  tiktoks?: string[];
 }
 
 /**
@@ -65,7 +66,6 @@ function parseCompanies(text: string): CompanyData[] {
   });
 }
 
-
 export function AdDiscoveryForm() {
   const [formData, setFormData] = useState<FormData>({
     companyName: "",
@@ -92,7 +92,7 @@ export function AdDiscoveryForm() {
     ]);
 
     try {
-      const response = await fetch("http://localhost:8000", {
+      const response = await fetch("http://127.0.0.1:3000/scrape", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -103,7 +103,19 @@ export function AdDiscoveryForm() {
         }),
       });
       const data = await response.json();
-      console.log("TikTok URLs:", data);
+
+      // Update companies with their TikTok URLs
+      setCompanies((prevCompanies) => {
+        return prevCompanies.map((company) => {
+          const companyTikToks = data[company.name];
+          return companyTikToks
+            ? {
+                ...company,
+                tiktoks: companyTikToks,
+              }
+            : company;
+        });
+      });
     } catch (error) {
       console.error("Error fetching TikTok URLs:", error);
     } finally {
@@ -408,17 +420,32 @@ export function AdDiscoveryForm() {
                       <div key={index} className="flex flex-col items-center">
                         <div
                           className="relative bg-white rounded-xl px-6 py-4 w-48 
-                            text-purple-700 font-semibold text-lg shadow-sm mb-2"
+                          text-purple-700 font-semibold text-lg shadow-sm mb-2"
                         >
                           <div
                             className="absolute -inset-0.5 bg-gradient-to-r 
-                              from-purple-500 to-pink-500 rounded-xl 
-                              opacity-30 -z-10"
+                            from-purple-500 to-pink-500 rounded-xl opacity-30 -z-10"
                           />
-                          {/* If you re-enable the logo logic, you can place it here */}
                           <div className="text-center">{co.name}</div>
                         </div>
-                        <span className="text-gray-600">TikToks</span>
+                        <span className="text-gray-600 mb-4">TikToks</span>
+                        {/* Display TikTok videos */}
+                        <div className="flex flex-col gap-4">
+                          {co.tiktoks?.map((tiktokUrl, idx) => (
+                            <div key={idx} className="w-[325px] h-[575px]">
+                              <iframe
+                                src={`${tiktokUrl}?embed_source=70842512`}
+                                allowFullScreen
+                                className="w-full h-full border-0"
+                              />
+                            </div>
+                          ))}
+                          {!co.tiktoks && !isFetchingTikToks && (
+                            <p className="text-gray-500 text-sm">
+                              No TikToks found
+                            </p>
+                          )}
+                        </div>
                       </div>
                     ))}
                 </div>
