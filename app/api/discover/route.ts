@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const { companyName, description } = await request.json();
+    const { description } = await request.json();
 
     // 1) Get your API key from .env
     const apiKey = process.env.PERPLEXITY_API_KEY;
@@ -13,23 +13,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2) Build the request payload for Perplexity
-    //    We enhance the user content to ask for logos, top 5, etc.
+    // 2) Make sure description is present
+    if (!description) {
+      return NextResponse.json(
+        { error: "Description is missing or empty" },
+        { status: 400 }
+      );
+    }
+
+    // 3) Construct prompt so Perplexity returns content in the 
+    //    ### 1. SomeApp format needed by parseCompanies
     const body = {
-      model: "sonar", // or "sonar-pro", etc.
+      model: "sonar-pro", // or "sonar-pro", etc.
       messages: [
         {
           role: "system",
-          content: "You are a concise AI. Format output in Markdown.",
+          content: "You are a concise AI. Format output in Markdown."
         },
         {
           role: "user",
           content: `
-We are "${companyName}" offering: "${description}".
-Provide **5 top companies** that are currently **viral** in the general category of our product and the company description.
-Use headings, bullet points, or bold styling in Markdown.
-          `,
-        },
+Here is information about a company: "${description}".
+Please list the top 5 most popular apps in the industry this company is based in,
+and format the answer as follows:
+
+### 1. <Name of App>
+A short description about the app or why it's popular.
+
+### 2. <Name of App>
+Another short description.
+
+...and so on, up to ### 5.
+          `
+        }
       ],
       max_tokens: 1000,
       temperature: 0.2,
@@ -42,35 +58,32 @@ Use headings, bullet points, or bold styling in Markdown.
       stream: false,
       presence_penalty: 0,
       frequency_penalty: 1,
-      response_format: null,
+      response_format: null
     };
 
-    // 3) Call the Perplexity endpoint
+    // 4) Call the Perplexity endpoint
     const response = await fetch("https://api.perplexity.ai/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
 
-    // If Perplexity returns non-200, handle it
+    // 5) Check Perplexity response
     if (!response.ok) {
-      console.error(
-        "Perplexity API error:",
-        response.status,
-        response.statusText
-      );
+      console.error("Perplexity API error:", response.status, response.statusText);
       return NextResponse.json(
         { error: "Failed to fetch from Perplexity API" },
         { status: 500 }
       );
     }
 
-    // 4) Return whatever Perplexity gives us
+    // 6) Return parsed response
     const data = await response.json();
     return NextResponse.json(data);
+
   } catch (err) {
     console.error("Error in /api/discover route:", err);
     return NextResponse.json(
