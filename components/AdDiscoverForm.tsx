@@ -487,7 +487,7 @@ export function AdDiscoveryForm() {
                         {/* Display TikTok videos */}
                         <div className="flex flex-col gap-4">
                           {co.tiktoks?.map((tiktokUrl, idx) => (
-                            <div key={idx} className="w-[250px] h-[445px]">
+                            <div key={idx} className="w-[250px]">
                               <div className="relative">
                                 {/* Loading placeholder */}
                                 <div className="absolute inset-0 bg-gray-100 rounded-lg animate-pulse flex items-center justify-center">
