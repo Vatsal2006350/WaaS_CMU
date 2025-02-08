@@ -16,6 +16,8 @@ def get_tiktok_handle_serpapi(app_name, app_desc):
         for result in results["organic_results"]:
             if "tiktok.com/@" in result["link"]:
                 handle = result["link"].split("/")[-1]
+                if '?' in handle:
+                    handle = handle.split('?')[0]
                 if app_name.lower() in handle.lower():
                     return handle  # Returns the handle without '@'
             if "snippet" in result and "tiktok.com/@" in result["snippet"]:
@@ -23,6 +25,8 @@ def get_tiktok_handle_serpapi(app_name, app_desc):
                 for part in snippet_parts:
                     if "tiktok.com/@" in part:
                         handle = part.split("/")[-1]
+                        if '?' in handle:
+                            handle = handle.split('?')[0]
                         if app_name.lower() in handle.lower():
                             return handle  # Returns the handle without '@'
 

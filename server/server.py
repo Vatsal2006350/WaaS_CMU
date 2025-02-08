@@ -5,17 +5,25 @@ import os
 import yt_dlp
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {
+    "origins": "*",
+    "methods": ["GET", "POST", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization"]
+}})
 
 # 4) The /scrape route
 @app.route("/scrape", methods=["POST"])
 def scrape_video():
-    data = request.get_json()
-    app_descriptions = data.get("app_descriptions")
-    num_vids_each = data.get("num_vids_each")
-    
-    res = get_videos(app_descriptions, num_vids_each)
-    return jsonify(res), 200
+    try:
+        data = request.get_json()
+        app_descriptions = data.get("app_descriptions")
+        num_vids_each = data.get("num_vids_each")
+        print("1")
+        
+        res = get_videos(app_descriptions[0], num_each=num_vids_each)
+        return jsonify(res), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 def download_tiktok_video(url, output_path="downloads/%(title)s.%(ext)s"):
     """
@@ -55,4 +63,4 @@ def download_videos():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=3005)
+    app.run(debug=True, port=8000)

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Building, FileText } from "lucide-react";
 import Image from "next/image";
+import axios from "axios";
 
 interface PerplexityResponse {
   id: string;
@@ -81,32 +82,52 @@ export function AdDiscoveryForm() {
 
   // Add new state for TikTok loading
   const [isFetchingTikToks, setIsFetchingTikToks] = useState(false);
+
+  // Add new state for selected TikToks
+  const [selectedTikToks, setSelectedTikToks] = useState<string[]>([]);
+
+  // Add state for AI processing
+  const [isProcessingAi, setIsProcessingAi] = useState(false);
+
   /**
    * Sends selected apps to your /scrape endpoint, passing [name, shortDescription].
+   * Only fetches TikToks for companies that don't already have them.
    */
   async function getTikTokUrls(companies: CompanyData[]) {
     setIsFetchingTikToks(true);
-    const appDescriptions = companies.map((company) => [
+
+    // Filter to only companies that don't have TikToks yet
+    const companiesNeedingTikToks = companies.filter(
+      (company) => !company.tiktoks
+    );
+
+    if (companiesNeedingTikToks.length === 0) {
+      setIsFetchingTikToks(false);
+      setShowSelected(true);
+      return;
+    }
+
+    const appDescriptions = companiesNeedingTikToks.map((company) => [
       company.name,
       company.shortDescription,
     ]);
 
     try {
-      const response = await fetch("http://127.0.0.1:3000/scrape", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          app_descriptions: appDescriptions,
-          num_vids_each: 2,
-        }),
+      console.log("Fetching TikToks for:", appDescriptions);
+      const response = await axios.post("http://localhost:8000/scrape", {
+        app_descriptions: [appDescriptions],
+        num_vids_each: 2,
       });
-      const data = await response.json();
+      const data = response.data;
 
-      // Update companies with their TikTok URLs
+      // Update companies with their TikTok URLs, preserving existing ones
       setCompanies((prevCompanies) => {
         return prevCompanies.map((company) => {
+          // If company already has TikToks, keep them
+          if (company.tiktoks) {
+            return company;
+          }
+          // Otherwise, add new TikToks if available
           const companyTikToks = data[company.name];
           return companyTikToks
             ? {
@@ -120,6 +141,7 @@ export function AdDiscoveryForm() {
       console.error("Error fetching TikTok URLs:", error);
     } finally {
       setIsFetchingTikToks(false);
+      setShowSelected(true);
     }
   }
 
@@ -178,6 +200,38 @@ export function AdDiscoveryForm() {
     setShowSelected(false);
     setShowForm(true);
   }
+
+  // Add toggle function for TikToks
+  const toggleTikTokSelection = (tiktokUrl: string) => {
+    setSelectedTikToks((prev) =>
+      prev.includes(tiktokUrl)
+        ? prev.filter((url) => url !== tiktokUrl)
+        : [...prev, tiktokUrl]
+    );
+  };
+
+  // Add the sendTikToksToAi function
+  const sendTikToksToAi = async () => {
+    if (selectedTikToks.length === 0) {
+      alert("Please select at least one TikTok video");
+      return;
+    }
+
+    setIsProcessingAi(true);
+    try {
+      const response = await axios.post("http://localhost:8080/build_queries", {
+        tiktoks: selectedTikToks,
+      });
+
+      console.log("AI Processing Response:", response.data);
+      // You can add additional handling of the response here
+    } catch (error) {
+      console.error("Error processing TikToks:", error);
+      alert("Error processing TikToks. Please try again.");
+    } finally {
+      setIsProcessingAi(false);
+    }
+  };
 
   return (
     <div suppressHydrationWarning>
@@ -365,13 +419,14 @@ export function AdDiscoveryForm() {
                   {selectedCompanies.length > 0 && (
                     <button
                       onClick={() => {
-                        setShowSelected(true);
-                        // Pass shortDescription + name to your scraper
+                        // First fetch TikToks, then show selected view after they're loaded
                         getTikTokUrls(
                           companies.filter((co) =>
                             selectedCompanies.includes(co.name)
                           )
-                        );
+                        ).then(() => {
+                          setShowSelected(true);
+                        });
                       }}
                       className="mt-8 relative px-8 py-3 bg-white text-white text-lg 
                         font-medium rounded-full transition-all transform hover:scale-[1.02] 
@@ -432,12 +487,49 @@ export function AdDiscoveryForm() {
                         {/* Display TikTok videos */}
                         <div className="flex flex-col gap-4">
                           {co.tiktoks?.map((tiktokUrl, idx) => (
-                            <div key={idx} className="w-[325px] h-[575px]">
-                              <iframe
-                                src={`${tiktokUrl}?embed_source=70842512`}
-                                allowFullScreen
-                                className="w-full h-full border-0"
-                              />
+                            <div key={idx} className="w-[250px] h-[445px]">
+                              <div className="relative">
+                                {/* Loading placeholder */}
+                                <div className="absolute inset-0 bg-gray-100 rounded-lg animate-pulse flex items-center justify-center">
+                                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                                </div>
+
+                                <blockquote
+                                  className="tiktok-embed"
+                                  cite={tiktokUrl}
+                                  data-video-id={tiktokUrl.split("/video/")[1]}
+                                  data-autoplay="false"
+                                >
+                                  <section>
+                                    <a
+                                      target="_blank"
+                                      href={tiktokUrl}
+                                      rel="noreferrer"
+                                    >
+                                      Loading...
+                                    </a>
+                                  </section>
+                                </blockquote>
+                                <script
+                                  async
+                                  src="https://www.tiktok.com/embed.js"
+                                ></script>
+                              </div>
+
+                              {/* Selection button */}
+                              <button
+                                onClick={() => toggleTikTokSelection(tiktokUrl)}
+                                className={`mt-2 w-full px-4 py-2 rounded-lg font-medium transition-all
+                                  ${
+                                    selectedTikToks.includes(tiktokUrl)
+                                      ? "bg-purple-500 text-white hover:bg-purple-600"
+                                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                  }`}
+                              >
+                                {selectedTikToks.includes(tiktokUrl)
+                                  ? "Deselect"
+                                  : "Select"}
+                              </button>
                             </div>
                           ))}
                           {!co.tiktoks && !isFetchingTikToks && (
@@ -449,25 +541,60 @@ export function AdDiscoveryForm() {
                       </div>
                     ))}
                 </div>
-                <button
-                  onClick={() => setShowSelected(false)}
-                  className="mt-8 relative px-8 py-3 bg-white text-white text-lg 
-                    font-medium rounded-full transition-all transform hover:scale-[1.02] 
-                    hover:-translate-y-[2px] focus:outline-none focus:ring-2 
-                    focus:ring-purple-200 focus:ring-offset-2 group"
-                >
-                  <div
-                    className="absolute inset-0 bg-gradient-to-r from-purple-500/95 
-                    to-pink-500/95 rounded-full backdrop-blur-sm"
-                  />
-                  <div
-                    className="absolute -inset-1.5 bg-gradient-to-r from-purple-600/60 
-                    to-pink-600/60 rounded-full blur-md"
-                  />
-                  <div className="relative flex items-center justify-center">
-                    <span className="leading-6 inline-block mt-0.5">Back</span>
-                  </div>
-                </button>
+
+                {/* Navigation and AI Analysis buttons */}
+                <div className="flex flex-col items-center gap-4 mt-8">
+                  <button
+                    onClick={() => setShowSelected(false)}
+                    className="relative px-8 py-3 bg-white text-white text-lg 
+                      font-medium rounded-full transition-all transform hover:scale-[1.02] 
+                      hover:-translate-y-[2px] focus:outline-none focus:ring-2 
+                      focus:ring-purple-200 focus:ring-offset-2 group"
+                  >
+                    <div
+                      className="absolute inset-0 bg-gradient-to-r from-purple-500/95 
+                      to-pink-500/95 rounded-full backdrop-blur-sm"
+                    />
+                    <div
+                      className="absolute -inset-1.5 bg-gradient-to-r from-purple-600/60 
+                      to-pink-600/60 rounded-full blur-md"
+                    />
+                    <div className="relative flex items-center justify-center">
+                      <span className="leading-6 inline-block mt-0.5">
+                        Back
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* AI Analysis button */}
+                  {selectedTikToks.length > 0 && (
+                    <button
+                      onClick={sendTikToksToAi}
+                      disabled={isProcessingAi}
+                      className={`relative px-8 py-3 bg-white text-white text-lg 
+                        font-medium rounded-full transition-all transform hover:scale-[1.02] 
+                        hover:-translate-y-[2px] focus:outline-none focus:ring-2 
+                        focus:ring-purple-200 focus:ring-offset-2 group
+                        ${
+                          isProcessingAi ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                    >
+                      <div
+                        className="absolute inset-0 bg-gradient-to-r from-purple-500/95 
+                        to-pink-500/95 rounded-full backdrop-blur-sm"
+                      />
+                      <div
+                        className="absolute -inset-1.5 bg-gradient-to-r from-purple-600/60 
+                        to-pink-600/60 rounded-full blur-md"
+                      />
+                      <div className="relative flex items-center justify-center">
+                        <span className="leading-6 inline-block mt-0.5">
+                          {isProcessingAi ? "Analyzing..." : "Analyze with AI"}
+                        </span>
+                      </div>
+                    </button>
+                  )}
+                </div>
               </>
             )}
 
