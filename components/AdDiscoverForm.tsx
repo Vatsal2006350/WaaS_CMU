@@ -27,6 +27,7 @@ interface FormData {
 interface CompanyData {
   name: string;
   description: string;
+  selected?: boolean;
 }
 
 // A simple parser to find lines like "### 1. Notion", etc.
@@ -57,6 +58,8 @@ export function AdDiscoveryForm() {
 
   // Store the parsed top five companies
   const [companies, setCompanies] = useState<CompanyData[]>([]);
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+  const [showSelected, setShowSelected] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +87,14 @@ export function AdDiscoveryForm() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const toggleCompany = (companyName: string) => {
+    setSelectedCompanies((prev) =>
+      prev.includes(companyName)
+        ? prev.filter((name) => name !== companyName)
+        : [...prev, companyName]
+    );
   };
 
   return (
@@ -189,9 +200,7 @@ export function AdDiscoveryForm() {
           </p>
         )}
 
-        {/* Show the 5 cards in a flex-wrapped row:
-            3 items in the first line, 2 items in the second, centered */}
-        {!isLoading && companies.length > 0 && (
+        {!isLoading && companies.length > 0 && !showSelected && (
           <>
             <p className="text-xl font-semibold text-gray-800 mb-8">
               Top five competitors
@@ -203,40 +212,79 @@ export function AdDiscoveryForm() {
               {companies.map((co, index) => (
                 <div
                   key={index}
-                  className="relative bg-white rounded-xl 
-                             px-6 py-4 w-48 text-purple-700 font-semibold 
-                             text-lg shadow-sm hover:shadow-md 
-                             cursor-pointer group
-                             transition-transform transform 
-                             hover:-translate-y-1"
+                  onClick={() => toggleCompany(co.name)}
+                  className={`relative bg-white rounded-xl px-6 py-4 w-48 
+                    text-purple-700 font-semibold text-lg shadow-sm 
+                    hover:shadow-md cursor-pointer group transition-all 
+                    transform hover:-translate-y-1
+                    ${selectedCompanies.includes(co.name) ? "" : ""}
+                  `}
                 >
+                  {/* Gradient border for selected state */}
+                  {selectedCompanies.includes(co.name) && (
+                    <div
+                      className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 
+                      to-pink-500 rounded-xl opacity-30 -z-10"
+                    />
+                  )}
+
                   {/* Company name */}
                   {co.name}
 
-                  {/* Hover tooltip (above the card) */}
+                  {/* Hover tooltip */}
                   <div
-                    className="absolute bottom-full left-1/2 
-                               -translate-x-1/2 mb-2 w-60 
-                               bg-white border border-gray-200 
-                               rounded-md p-3 text-left text-gray-700 
-                               opacity-0 pointer-events-none 
-                               group-hover:opacity-100 
-                               transition-opacity z-50"
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 
+                    w-60 bg-white border border-gray-200 rounded-md p-3 text-left 
+                    text-gray-700 opacity-0 pointer-events-none group-hover:opacity-100 
+                    transition-opacity z-50"
                   >
                     {co.description}
-                    {/* Arrow pointing down at the card */}
                     <div
-                      className="absolute left-1/2 bottom-[-6px] 
-                                 -translate-x-1/2 w-0 h-0 
-                                 border-l-6 border-r-6 border-t-6
-                                 border-l-transparent 
-                                 border-r-transparent 
-                                 border-t-white"
+                      className="absolute left-1/2 bottom-[-6px] -translate-x-1/2 
+                      w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent 
+                      border-r-transparent border-t-white"
                     />
                   </div>
                 </div>
               ))}
             </div>
+            {selectedCompanies.length > 0 && (
+              <button
+                onClick={() => setShowSelected(true)}
+                className="mt-8 relative px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-medium rounded-xl transition-all transform hover:scale-[1.02] hover:-translate-y-[2px] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
+              >
+                <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] bg-gradient-to-r from-purple-700 to-pink-700 rounded-xl -z-10" />
+                Next
+              </button>
+            )}
+          </>
+        )}
+
+        {!isLoading && companies.length > 0 && showSelected && (
+          <>
+            <p className="text-xl font-semibold text-gray-800 mb-8">
+              Selected Companies
+            </p>
+            <div className="flex justify-center gap-8 max-w-4xl mx-auto">
+              {companies
+                .filter((co) => selectedCompanies.includes(co.name))
+                .map((co, index) => (
+                  <div key={index} className="flex flex-col items-center">
+                    <div className="relative bg-white rounded-xl px-6 py-4 w-48 text-purple-700 font-semibold text-lg shadow-sm mb-2">
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl opacity-30 -z-10" />
+                      {co.name}
+                    </div>
+                    <span className="text-gray-600">TikToks</span>
+                  </div>
+                ))}
+            </div>
+            <button
+              onClick={() => setShowSelected(false)}
+              className="mt-8 relative px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-medium rounded-xl transition-all transform hover:scale-[1.02] hover:-translate-y-[2px] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
+            >
+              <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] bg-gradient-to-r from-purple-700 to-pink-700 rounded-xl -z-10" />
+              Back
+            </button>
           </>
         )}
 
