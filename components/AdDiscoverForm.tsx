@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Building, FileText } from "lucide-react";
+import Image from "next/image";
 
-// Minimal interface for Perplexity's raw response
 interface PerplexityResponse {
   id: string;
   model: string;
@@ -27,27 +27,44 @@ interface FormData {
 interface CompanyData {
   name: string;
   description: string;
+  logo?: string;
   selected?: boolean;
+  /** The short "Category" line extracted from the first line of the response (e.g. "Productivity app") */
+  shortDescription?: string;
 }
 
-// A simple parser to find lines like "### 1. Notion", etc.
+/**
+ * Parse the Perplexity response for 5 apps.
+ * We expect the rest of the text to be in a "### 1. AppName" format.
+ */
 function parseCompanies(text: string): CompanyData[] {
-  // This splits on "### 1.", "### 2.", etc. and discards the initial empty chunk
+  // Split on "### 1.", "### 2.", etc.
   const blocks = text.split(/###\s+\d+\.\s+/).slice(1);
 
-  // Map each chunk to a name + description
   return blocks.slice(0, 5).map((block) => {
     const lines = block.trim().split("\n");
-    // First line might be "**Notion**" or just "Notion"
     const firstLine = lines[0].replace(/\*+/g, "").trim();
+
+    // Everything after the first line is the app description
     const rest = lines.slice(1).join("\n").trim();
+
+    // Attempt to find a "Logo:" line
+    let logo: string | undefined;
+    const logoRegex = /Logo:\s*(https?:\/\/[^\s]+)/i;
+    const logoMatch = rest.match(logoRegex);
+
+    if (logoMatch) {
+      logo = logoMatch[1];
+    }
 
     return {
       name: firstLine || "Unknown",
       description: rest || "No description provided.",
+      logo,
     };
   });
 }
+
 
 export function AdDiscoveryForm() {
   const [formData, setFormData] = useState<FormData>({
@@ -57,13 +74,44 @@ export function AdDiscoveryForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(true);
 
-  // Store the parsed top five companies
+  // List of parsed apps + their shortDescription
   const [companies, setCompanies] = useState<CompanyData[]>([]);
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [showSelected, setShowSelected] = useState(false);
 
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Add new state for TikTok loading
+  const [isFetchingTikToks, setIsFetchingTikToks] = useState(false);
+  /**
+   * Sends selected apps to your /scrape endpoint, passing [name, shortDescription].
+   */
+  async function getTikTokUrls(companies: CompanyData[]) {
+    setIsFetchingTikToks(true);
+    const appDescriptions = companies.map((company) => [
+      company.name,
+      company.shortDescription,
+    ]);
+
+    try {
+      const response = await fetch("https://35565442dd3e9a.lhr.life/scrape", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          app_descriptions: appDescriptions,
+          num_vids_each: 2,
+        }),
+      });
+      const data = await response.json();
+      console.log("TikTok URLs:", data);
+    } catch (error) {
+      console.error("Error fetching TikTok URLs:", error);
+    } finally {
+      setIsFetchingTikToks(false);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
     setShowForm(false);
@@ -79,291 +127,354 @@ export function AdDiscoveryForm() {
       });
 
       const data: PerplexityResponse = await res.json();
-
-      // Extract and parse Perplexity's text
       const content = data?.choices?.[0]?.message?.content || "";
-      const parsed = parseCompanies(content);
-      setCompanies(parsed);
+
+      // 1) Extract the first line (short category description),
+      //    e.g. "Productivity app"
+      const lines = content.split("\n");
+      const categoryDescription = lines[0]?.trim() || "";
+
+      // 2) Parse the rest of the text into actual app data
+      const parsedApps = parseCompanies(content);
+
+      // 3) Attach the short description from line[0] to each app
+      const finalCompanies = parsedApps.map((app) => ({
+        ...app,
+        shortDescription: categoryDescription,
+      }));
+
+      setCompanies(finalCompanies);
     } catch (error) {
       console.error(error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  // Toggle a company's "selected" state
-  const toggleCompany = (companyName: string) => {
+  function toggleCompany(companyName: string) {
     setSelectedCompanies((prev) =>
       prev.includes(companyName)
         ? prev.filter((name) => name !== companyName)
         : [...prev, companyName]
     );
-  };
+  }
 
-  // Reset all states so user can start fresh
-  const handleNewChat = () => {
+  function handleNewChat() {
     setFormData({ companyName: "", description: "" });
     setCompanies([]);
     setSelectedCompanies([]);
     setShowSelected(false);
     setShowForm(true);
-  };
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className="max-w-6xl mx-auto"
-    >
-      {/* The Input Form */}
-      {showForm && (
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
-          <div>
-            <label
-              htmlFor="companyName"
-              className="text-lg font-medium text-gray-900 mb-2 flex items-center"
-            >
-              <Building className="w-5 h-5 mr-2 stroke-purple-500" />
-              Business or Brand Name
-            </label>
-            <div className="relative">
-              <div
-                className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px]
-                  bg-gradient-to-r from-purple-500 to-pink-500 
-                  rounded-xl opacity-30"
-              />
-              <input
-                type="text"
-                id="companyName"
-                value={formData.companyName}
-                onChange={(e) =>
-                  setFormData({ ...formData, companyName: e.target.value })
-                }
-                className="relative w-full px-4 py-3 bg-gradient-to-r
-                  from-purple-50 to-pink-50 rounded-xl text-gray-900
-                  placeholder-gray-500 focus:outline-none
-                  focus:ring-2 focus:ring-purple-400
-                  focus:border-transparent transition-all"
-                placeholder="Enter your company name"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="description"
-              className="text-lg font-medium text-gray-900 mb-2 flex items-center"
-            >
-              <FileText className="w-5 h-5 mr-2 stroke-purple-500" />
-              Product Description
-            </label>
-            <div className="relative">
-              <div
-                className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[-.2px]
-                  bg-gradient-to-r from-purple-500 to-pink-500 
-                  rounded-xl opacity-30"
-              />
-              <textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                rows={4}
-                className="relative w-full px-4 py-3 bg-gradient-to-r
-                  from-purple-50 to-pink-50 rounded-xl text-gray-900
-                  placeholder-gray-500 focus:outline-none
-                  focus:ring-2 focus:ring-purple-400
-                  focus:border-transparent transition-all"
-                placeholder="Describe your product or service..."
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="relative w-full flex items-center justify-center px-8 py-4
-              bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600
-              hover:to-pink-600 text-white text-lg font-medium rounded-xl
-              transition-all transform hover:scale-[1.02] hover:-translate-y-[2px]
-              focus:outline-none focus:ring-2 focus:ring-purple-400
-              focus:ring-offset-2 disabled:opacity-50
-              disabled:cursor-not-allowed disabled:transform-none"
-          >
-            <div
-              className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px]
-                bg-gradient-to-r from-purple-700 to-pink-700
-                rounded-xl -z-10"
-            />
-            <Sparkles className="w-5 h-5 mr-2" />
-            {isLoading ? "Discovering Ads..." : "Discover Successful Ads"}
-          </button>
-        </form>
-      )}
-
-      {/* Results + Actions */}
-      <div
-        className="mt-12 bg-gradient-to-r from-purple-50 to-pink-50
-          rounded-2xl p-6 text-center border border-purple-100"
+    <div suppressHydrationWarning>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="max-w-6xl mx-auto"
       >
-        {isLoading && (
-          <p className="text-gray-600 text-lg">
-            Finding top five competitors...
-          </p>
+        {/* The Input Form */}
+        {showForm && (
+          <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
+            <div>
+              <label
+                htmlFor="companyName"
+                className="text-lg font-medium text-gray-900 mb-2 flex items-center"
+              >
+                <Building className="w-5 h-5 mr-2 stroke-purple-500" />
+                Business or Brand Name
+              </label>
+              <div className="relative">
+                <div
+                  className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px]
+                    bg-gradient-to-r from-purple-500 to-pink-500 
+                    rounded-xl opacity-30"
+                />
+                <input
+                  type="text"
+                  id="companyName"
+                  value={formData.companyName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, companyName: e.target.value })
+                  }
+                  className="relative w-full px-4 py-3 bg-gradient-to-r
+                    from-purple-50 to-pink-50 rounded-xl text-gray-900
+                    placeholder-gray-500 focus:outline-none
+                    focus:ring-2 focus:ring-purple-400
+                    focus:border-transparent transition-all"
+                  placeholder="Enter your company name"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="description"
+                className="text-lg font-medium text-gray-900 mb-2 flex items-center"
+              >
+                <FileText className="w-5 h-5 mr-2 stroke-purple-500" />
+                Product Description
+              </label>
+              <div className="relative">
+                <div
+                  className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[-.2px]
+                    bg-gradient-to-r from-purple-500 to-pink-500 
+                    rounded-xl opacity-30"
+                />
+                <textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  rows={4}
+                  className="relative w-full px-4 py-3 bg-gradient-to-r
+                    from-purple-50 to-pink-50 rounded-xl text-gray-900
+                    placeholder-gray-500 focus:outline-none
+                    focus:ring-2 focus:ring-purple-400
+                    focus:border-transparent transition-all"
+                  placeholder="Describe your product or service..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e as unknown as React.FormEvent);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="relative w-full flex items-center justify-center px-8 py-3 
+                bg-white text-white text-lg font-medium rounded-full 
+                transition-all transform hover:scale-[1.02] hover:-translate-y-[2px] 
+                focus:outline-none focus:ring-2 focus:ring-purple-200 
+                focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed 
+                disabled:transform-none group"
+            >
+              <div
+                className="absolute inset-0 bg-gradient-to-r from-purple-500/95 
+                to-pink-500/95 rounded-full backdrop-blur-sm"
+              />
+              <div
+                className="absolute -inset-1.5 bg-gradient-to-r from-purple-600/60 
+                to-pink-600/60 rounded-full blur-md"
+              />
+              <div className="relative flex items-center">
+                <Sparkles className="w-5 h-5 mr-2 stroke-white" />
+                <span className="leading-6 inline-block mt-0.5">
+                  {isLoading ? "Discovering Ads..." : "Discover Successful Ads"}
+                </span>
+              </div>
+            </button>
+          </form>
         )}
 
-        {/* Show competitor list */}
-        {!isLoading && companies.length > 0 && !showSelected && (
-          <>
-            <p className="text-2xl font-semibold text-gray-800 mb-8">
-              Top five competitors
-            </p>
-            <div className="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
-              {companies.map((co, index) => (
-                <div
-                  key={index}
-                  onClick={() => toggleCompany(co.name)}
-                  className={`relative bg-white rounded-xl px-6 py-4 w-48 
-                    text-purple-700 font-semibold text-lg shadow-sm 
-                    hover:shadow-md cursor-pointer group transition-all 
-                    transform hover:-translate-y-1
-                    ${
-                      selectedCompanies.includes(co.name)
-                        ? "ring-2 ring-purple-500"
-                        : ""
-                    }
-                  `}
-                >
-                  {/* Gradient border for selected state */}
-                  {selectedCompanies.includes(co.name) && (
-                    <div
-                      className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 
-                      to-pink-500 rounded-xl opacity-30 -z-10"
-                    />
-                  )}
-
-                  {/* Company name */}
-                  {co.name}
-
-                  {/* Hover tooltip for description */}
-                  <div
-                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2
-                      w-60 bg-white border border-gray-200 rounded-md p-3 text-left
-                      text-gray-700 opacity-0 pointer-events-none 
-                      group-hover:opacity-100 transition-opacity z-50"
-                  >
-                    {co.description}
-                    <div
-                      className="absolute left-1/2 bottom-[-6px] 
-                        -translate-x-1/2 w-0 h-0 border-l-6 border-r-6 
-                        border-t-6 border-l-transparent 
-                        border-r-transparent border-t-white"
+        {/* Results + Actions */}
+        <div className="relative mt-12">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl opacity-30"></div>
+          <div className="relative bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 text-center">
+            {isLoading && (
+              <>
+                <p className="text-gray-600 text-lg mb-4">
+                  Finding top five competitors...
+                </p>
+                <div className="flex justify-center items-center">
+                  <div className="flex items-center bg-black text-white px-4 py-1.5 rounded-full">
+                    <span className="text-sm mr-2">powered by perplexity</span>
+                    <Image
+                      src="/perplexity.png"
+                      alt="Perplexity Logo"
+                      width={20}
+                      height={20}
+                      className="inline-block"
                     />
                   </div>
                 </div>
-              ))}
-            </div>
-            <div className="flex flex-col items-center">
-              {selectedCompanies.length > 0 && (
-                <button
-                  onClick={() => setShowSelected(true)}
-                  className="mt-8 relative px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-medium rounded-2xl transition-all transform hover:scale-[1.02] hover:-translate-y-[2px] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
-                >
-                  <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] bg-gradient-to-r from-purple-700 to-pink-700 rounded-2xl -z-10" />
-                  <span className="leading-6">Next</span>
-                </button>
-              )}
-            </div>
-            {/* New Chat button */}
-            <div className="absolute bottom-4 left-4">
-              <button
-                onClick={handleNewChat}
-                className="px-4 py-2 bg-gradient-to-r from-gray-300 to-gray-400 text-white text-sm font-medium rounded-lg transition-all transform hover:scale-[1.02] hover:-translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
-              >
-                <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[4px] bg-gradient-to-r from-gray-500 to-gray-600 rounded-lg -z-10" />
-                <span className="leading-5">New Chat</span>
-              </button>
-            </div>
-          </>
-        )}
+              </>
+            )}
 
-        {/* Show selected companies */}
-        {!isLoading && companies.length > 0 && showSelected && (
-          <>
-            <p className="text-2xl font-semibold text-gray-800 mb-8">
-              Selected Companies
-            </p>
-            <div className="flex justify-center gap-8 max-w-5xl mx-auto">
-              {companies
-                .filter((co) => selectedCompanies.includes(co.name))
-                .map((co, index) => (
-                  <div key={index} className="flex flex-col items-center">
+            {/* Show competitor list */}
+            {!isLoading && companies.length > 0 && !showSelected && (
+              <div className="relative">
+                {/* Loading overlay */}
+                {isFetchingTikToks && (
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-2xl">
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-gray-700 font-medium">
+                        Finding TikToks...
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-2xl font-semibold text-gray-800 mb-10">
+                  Top five competitors
+                </p>
+                <div className="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
+                  {companies.map((co, index) => (
                     <div
-                      className="relative bg-white rounded-xl px-6 py-4 w-48 
-                        text-purple-700 font-semibold text-lg shadow-sm mb-2"
+                      key={index}
+                      onClick={() => toggleCompany(co.name)}
+                      className={`relative bg-white rounded-xl px-6 py-4 
+                        min-w-[12rem] max-w-[16rem] text-purple-700 font-semibold text-lg 
+                        shadow-sm hover:shadow-md cursor-pointer group transition-all 
+                        transform hover:-translate-y-1
+                        ${
+                          selectedCompanies.includes(co.name)
+                            ? "ring-2 ring-purple-500"
+                            : ""
+                        }`}
+                    >
+                      {selectedCompanies.includes(co.name) && (
+                        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl opacity-30 -z-10" />
+                      )}
+
+                      {/* Center the name (and optional logo) */}
+                      <div className="flex justify-center text-center">
+                        <div className="break-words">{co.name}</div>
+                      </div>
+
+                      {/* Hover tooltip */}
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 bg-white border border-gray-200 rounded-md p-3 text-left text-gray-700 opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                        {co.description}
+                        <div className="absolute left-1/2 bottom-[-6px] -translate-x-1/2 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-white" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col items-center">
+                  {selectedCompanies.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setShowSelected(true);
+                        // Pass shortDescription + name to your scraper
+                        getTikTokUrls(
+                          companies.filter((co) =>
+                            selectedCompanies.includes(co.name)
+                          )
+                        );
+                      }}
+                      className="mt-8 relative px-8 py-3 bg-white text-white text-lg 
+                        font-medium rounded-full transition-all transform hover:scale-[1.02] 
+                        hover:-translate-y-[2px] focus:outline-none focus:ring-2 
+                        focus:ring-purple-200 focus:ring-offset-2 group"
                     >
                       <div
-                        className="absolute -inset-0.5 bg-gradient-to-r 
-                          from-purple-500 to-pink-500 rounded-xl 
-                          opacity-30 -z-10"
+                        className="absolute inset-0 bg-gradient-to-r from-purple-500/95 
+                        to-pink-500/95 rounded-full backdrop-blur-sm"
                       />
-                      {co.name}
-                    </div>
-                    <span className="text-gray-600">TikToks</span>
+                      <div
+                        className="absolute -inset-1.5 bg-gradient-to-r from-purple-600/60 
+                        to-pink-600/60 rounded-full blur-md"
+                      />
+                      <div className="relative flex items-center justify-center">
+                        <span className="leading-6 inline-block mt-0.5">
+                          Next
+                        </span>
+                      </div>
+                    </button>
+                  )}
+                </div>
+                {/* Restart button */}
+                <div className="absolute bottom-4 left-4">
+                  <button
+                    onClick={handleNewChat}
+                    className="px-4 py-2 bg-gradient-to-r from-gray-300 to-gray-400 text-white text-sm font-medium rounded-lg transition-all transform hover:scale-[1.02] hover:-translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                  >
+                    <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[4px] bg-gradient-to-r from-gray-500 to-gray-600 rounded-lg -z-10" />
+                    <span className="leading-5">Restart</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Show selected companies */}
+            {!isLoading && companies.length > 0 && showSelected && (
+              <>
+                <p className="text-2xl font-semibold text-gray-800 mb-10">
+                  Selected Companies
+                </p>
+                <div className="flex justify-center gap-8 max-w-5xl mx-auto">
+                  {companies
+                    .filter((co) => selectedCompanies.includes(co.name))
+                    .map((co, index) => (
+                      <div key={index} className="flex flex-col items-center">
+                        <div
+                          className="relative bg-white rounded-xl px-6 py-4 w-48 
+                            text-purple-700 font-semibold text-lg shadow-sm mb-2"
+                        >
+                          <div
+                            className="absolute -inset-0.5 bg-gradient-to-r 
+                              from-purple-500 to-pink-500 rounded-xl 
+                              opacity-30 -z-10"
+                          />
+                          {/* If you re-enable the logo logic, you can place it here */}
+                          <div className="text-center">{co.name}</div>
+                        </div>
+                        <span className="text-gray-600">TikToks</span>
+                      </div>
+                    ))}
+                </div>
+                <button
+                  onClick={() => setShowSelected(false)}
+                  className="mt-8 relative px-8 py-3 bg-white text-white text-lg 
+                    font-medium rounded-full transition-all transform hover:scale-[1.02] 
+                    hover:-translate-y-[2px] focus:outline-none focus:ring-2 
+                    focus:ring-purple-200 focus:ring-offset-2 group"
+                >
+                  <div
+                    className="absolute inset-0 bg-gradient-to-r from-purple-500/95 
+                    to-pink-500/95 rounded-full backdrop-blur-sm"
+                  />
+                  <div
+                    className="absolute -inset-1.5 bg-gradient-to-r from-purple-600/60 
+                    to-pink-600/60 rounded-full blur-md"
+                  />
+                  <div className="relative flex items-center justify-center">
+                    <span className="leading-6 inline-block mt-0.5">Back</span>
                   </div>
-                ))}
-            </div>
-            <button
-              onClick={() => setShowSelected(false)}
-              className="mt-8 relative px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-medium rounded-2xl transition-all transform hover:scale-[1.02] hover:-translate-y-[2px] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
-            >
-              <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] bg-gradient-to-r from-purple-700 to-pink-700 rounded-2xl -z-10" />
-              <span className="leading-6">Back</span>
-            </button>
-            {/* New Chat button */}
-            <div className="absolute bottom-4 left-4">
-              <button
-                onClick={handleNewChat}
-                className="px-4 py-2 bg-gradient-to-r from-gray-300 to-gray-400 text-white text-sm font-medium rounded-lg transition-all transform hover:scale-[1.02] hover:-translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
-              >
-                <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[4px] bg-gradient-to-r from-gray-500 to-gray-600 rounded-lg -z-10" />
-                <span className="leading-5">New Chat</span>
-              </button>
-            </div>
-          </>
-        )}
+                </button>
+              </>
+            )}
 
-        {/* No data + form hidden */}
-        {!isLoading && companies.length === 0 && !showForm && (
-          <>
-            <p className="text-gray-600 text-lg">No data to display yet.</p>
-            <button
-              onClick={handleNewChat}
-              className="mt-4 relative px-8 py-4 bg-gradient-to-r 
-                from-gray-300 to-gray-400 text-white text-lg font-medium 
-                rounded-xl transition-all transform hover:scale-[1.02] 
-                hover:-translate-y-[2px] focus:outline-none 
-                focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
-            >
-              <div
-                className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] 
-                  bg-gradient-to-r from-gray-500 to-gray-600 
-                  rounded-xl -z-10"
-              />
-              New Chat
-            </button>
-          </>
-        )}
+            {/* No data + form hidden */}
+            {!isLoading && companies.length === 0 && !showForm && (
+              <>
+                <p className="text-gray-600 text-lg">No data to display yet.</p>
+                <button
+                  onClick={handleNewChat}
+                  className="mt-4 relative px-8 py-4 bg-gradient-to-r 
+                    from-gray-300 to-gray-400 text-white text-lg font-medium 
+                    rounded-xl transition-all transform hover:scale-[1.02] 
+                    hover:-translate-y-[2px] focus:outline-none 
+                    focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                >
+                  <div
+                    className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] 
+                      bg-gradient-to-r from-gray-500 to-gray-600 
+                      rounded-xl -z-10"
+                  />
+                  New Chat
+                </button>
+              </>
+            )}
 
-        {/* Prompt to fill form (initial state) */}
-        {showForm && (
-          <p className="text-gray-600 text-lg">
-            Video previews and analysis will appear here after submission
-          </p>
-        )}
-      </div>
-    </motion.div>
+            {/* Prompt to fill form (initial state) */}
+            {showForm && (
+              <p className="text-gray-600 text-lg">
+                Video previews and analysis will appear here after submission
+              </p>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 }

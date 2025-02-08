@@ -1,20 +1,24 @@
 import { AdDiscoveryForm } from "../components/AdDiscoverForm";
+import Image from "next/image";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-white">
-      <main className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+      <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight mb-8">
-            Discover Top-Performing
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-              TikTok Ads with AI
-            </span>
-          </h1>
-          <p className="max-w-2xl mx-auto text-lg text-gray-600">
-            Find and analyze successful TikTok campaigns in your industry using
-            advanced AI technology
-          </p>
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <Image
+              src="/AdDojo-logo.png"
+              alt="AdDojo Logo"
+              width={480}
+              height={160}
+              className="object-contain"
+            />
+            <p className="max-w-2xl mx-auto text-lg text-gray-600">
+              Find and analyze successful TikTok campaigns in your industry
+              using advanced AI technology to create viral Tiktoks.
+            </p>
+          </div>
         </div>
         <AdDiscoveryForm />
       </main>
