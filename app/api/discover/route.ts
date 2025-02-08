@@ -4,7 +4,7 @@ export async function POST(request: Request) {
   try {
     const { description } = await request.json();
 
-    // 1) Get your API key from .env
+    // 1) Load your Perplexity API key from environment
     const apiKey = process.env.PERPLEXITY_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2) Make sure description is present
+    // 2) Validate description
     if (!description) {
       return NextResponse.json(
         { error: "Description is missing or empty" },
@@ -21,10 +21,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3) Construct prompt so Perplexity returns content in the 
-    //    ### 1. SomeApp format needed by parseCompanies
+    // 3) Build the request payload to Perplexity
     const body = {
-      model: "sonar-pro", // or "sonar-pro", etc.
+      model: "sonar-pro", // or "sonar", etc.
       messages: [
         {
           role: "system",
@@ -34,14 +33,25 @@ export async function POST(request: Request) {
           role: "user",
           content: `
 Here is information about a company: "${description}".
-Please list the top 5 most popular apps in the industry this company is based in,
-and format the answer as follows:
+This company is part of a specific industry or category based on the description above.
 
-### 1. <Name of App>
-A short description about the app or why it's popular.
+Please:
+1. Identify **5 popular apps** that operate in the **same industry or category** as this company.
+2. For each app, use this exact Markdown format:
 
-### 2. <Name of App>
-Another short description.
+### 1. AppName
+A short, plain-text description (no bracketed references such as [1] or [2]).
+
+3. **Do not include** any references, footnotes, disclaimers, or bracketed citations in the text.
+4. Make sure these apps are genuinely recognized in that industry and relevant to the given description.
+
+Finally, follow exactly the style:
+
+### 1. <App Name>
+<App description here>
+
+### 2. <App Name>
+<App description here>
 
 ...and so on, up to ### 5.
           `
@@ -61,7 +71,7 @@ Another short description.
       response_format: null
     };
 
-    // 4) Call the Perplexity endpoint
+    // 4) Call Perplexity API
     const response = await fetch("https://api.perplexity.ai/chat/completions", {
       method: "POST",
       headers: {
@@ -71,7 +81,7 @@ Another short description.
       body: JSON.stringify(body)
     });
 
-    // 5) Check Perplexity response
+    // 5) Handle non-200 responses
     if (!response.ok) {
       console.error("Perplexity API error:", response.status, response.statusText);
       return NextResponse.json(
@@ -80,7 +90,7 @@ Another short description.
       );
     }
 
-    // 6) Return parsed response
+    // 6) Forward Perplexity data back to client
     const data = await response.json();
     return NextResponse.json(data);
 

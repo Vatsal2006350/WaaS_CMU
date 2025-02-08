@@ -31,16 +31,17 @@ interface CompanyData {
 }
 
 // A simple parser to find lines like "### 1. Notion", etc.
-// The first line is the name, subsequent lines are the description.
 function parseCompanies(text: string): CompanyData[] {
   // This splits on "### 1.", "### 2.", etc. and discards the initial empty chunk
   const blocks = text.split(/###\s+\d+\.\s+/).slice(1);
+
   // Map each chunk to a name + description
   return blocks.slice(0, 5).map((block) => {
     const lines = block.trim().split("\n");
     // First line might be "**Notion**" or just "Notion"
     const firstLine = lines[0].replace(/\*+/g, "").trim();
     const rest = lines.slice(1).join("\n").trim();
+
     return {
       name: firstLine || "Unknown",
       description: rest || "No description provided.",
@@ -61,6 +62,7 @@ export function AdDiscoveryForm() {
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [showSelected, setShowSelected] = useState(false);
 
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -89,6 +91,7 @@ export function AdDiscoveryForm() {
     }
   };
 
+  // Toggle a company's "selected" state
   const toggleCompany = (companyName: string) => {
     setSelectedCompanies((prev) =>
       prev.includes(companyName)
@@ -97,15 +100,25 @@ export function AdDiscoveryForm() {
     );
   };
 
+  // Reset all states so user can start fresh
+  const handleNewChat = () => {
+    setFormData({ companyName: "", description: "" });
+    setCompanies([]);
+    setSelectedCompanies([]);
+    setShowSelected(false);
+    setShowForm(true);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="max-w-2xl mx-auto"
+      className="max-w-6xl mx-auto"
     >
+      {/* The Input Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
           <div>
             <label
               htmlFor="companyName"
@@ -116,7 +129,7 @@ export function AdDiscoveryForm() {
             </label>
             <div className="relative">
               <div
-                className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] 
+                className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px]
                   bg-gradient-to-r from-purple-500 to-pink-500 
                   rounded-xl opacity-30"
               />
@@ -127,10 +140,10 @@ export function AdDiscoveryForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, companyName: e.target.value })
                 }
-                className="relative w-full px-4 py-3 bg-gradient-to-r 
-                  from-purple-50 to-pink-50 rounded-xl text-gray-900 
-                  placeholder-gray-500 focus:outline-none 
-                  focus:ring-2 focus:ring-purple-400 
+                className="relative w-full px-4 py-3 bg-gradient-to-r
+                  from-purple-50 to-pink-50 rounded-xl text-gray-900
+                  placeholder-gray-500 focus:outline-none
+                  focus:ring-2 focus:ring-purple-400
                   focus:border-transparent transition-all"
                 placeholder="Enter your company name"
               />
@@ -147,7 +160,7 @@ export function AdDiscoveryForm() {
             </label>
             <div className="relative">
               <div
-                className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[-.2px] 
+                className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[-.2px]
                   bg-gradient-to-r from-purple-500 to-pink-500 
                   rounded-xl opacity-30"
               />
@@ -158,10 +171,10 @@ export function AdDiscoveryForm() {
                   setFormData({ ...formData, description: e.target.value })
                 }
                 rows={4}
-                className="relative w-full px-4 py-3 bg-gradient-to-r 
-                  from-purple-50 to-pink-50 rounded-xl text-gray-900 
-                  placeholder-gray-500 focus:outline-none 
-                  focus:ring-2 focus:ring-purple-400 
+                className="relative w-full px-4 py-3 bg-gradient-to-r
+                  from-purple-50 to-pink-50 rounded-xl text-gray-900
+                  placeholder-gray-500 focus:outline-none
+                  focus:ring-2 focus:ring-purple-400
                   focus:border-transparent transition-all"
                 placeholder="Describe your product or service..."
               />
@@ -171,17 +184,17 @@ export function AdDiscoveryForm() {
           <button
             type="submit"
             disabled={isLoading}
-            className="relative w-full flex items-center justify-center px-8 py-4 
-              bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 
-              hover:to-pink-600 text-white text-lg font-medium rounded-xl 
-              transition-all transform hover:scale-[1.02] hover:-translate-y-[2px] 
-              focus:outline-none focus:ring-2 focus:ring-purple-400 
-              focus:ring-offset-2 disabled:opacity-50 
+            className="relative w-full flex items-center justify-center px-8 py-4
+              bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600
+              hover:to-pink-600 text-white text-lg font-medium rounded-xl
+              transition-all transform hover:scale-[1.02] hover:-translate-y-[2px]
+              focus:outline-none focus:ring-2 focus:ring-purple-400
+              focus:ring-offset-2 disabled:opacity-50
               disabled:cursor-not-allowed disabled:transform-none"
           >
             <div
-              className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] 
-                bg-gradient-to-r from-purple-700 to-pink-700 
+              className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px]
+                bg-gradient-to-r from-purple-700 to-pink-700
                 rounded-xl -z-10"
             />
             <Sparkles className="w-5 h-5 mr-2" />
@@ -190,8 +203,9 @@ export function AdDiscoveryForm() {
         </form>
       )}
 
+      {/* Results + Actions */}
       <div
-        className="mt-12 bg-gradient-to-r from-purple-50 to-pink-50 
+        className="mt-12 bg-gradient-to-r from-purple-50 to-pink-50
           rounded-2xl p-6 text-center border border-purple-100"
       >
         {isLoading && (
@@ -200,15 +214,13 @@ export function AdDiscoveryForm() {
           </p>
         )}
 
+        {/* Show competitor list */}
         {!isLoading && companies.length > 0 && !showSelected && (
           <>
-            <p className="text-xl font-semibold text-gray-800 mb-8">
+            <p className="text-2xl font-semibold text-gray-800 mb-8">
               Top five competitors
             </p>
-            <div
-              className="flex flex-wrap justify-center gap-6
-                         max-w-4xl mx-auto"
-            >
+            <div className="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
               {companies.map((co, index) => (
                 <div
                   key={index}
@@ -217,7 +229,11 @@ export function AdDiscoveryForm() {
                     text-purple-700 font-semibold text-lg shadow-sm 
                     hover:shadow-md cursor-pointer group transition-all 
                     transform hover:-translate-y-1
-                    ${selectedCompanies.includes(co.name) ? "" : ""}
+                    ${
+                      selectedCompanies.includes(co.name)
+                        ? "ring-2 ring-purple-500"
+                        : ""
+                    }
                   `}
                 >
                   {/* Gradient border for selected state */}
@@ -231,47 +247,68 @@ export function AdDiscoveryForm() {
                   {/* Company name */}
                   {co.name}
 
-                  {/* Hover tooltip */}
+                  {/* Hover tooltip for description */}
                   <div
-                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 
-                    w-60 bg-white border border-gray-200 rounded-md p-3 text-left 
-                    text-gray-700 opacity-0 pointer-events-none group-hover:opacity-100 
-                    transition-opacity z-50"
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+                      w-60 bg-white border border-gray-200 rounded-md p-3 text-left
+                      text-gray-700 opacity-0 pointer-events-none 
+                      group-hover:opacity-100 transition-opacity z-50"
                   >
                     {co.description}
                     <div
-                      className="absolute left-1/2 bottom-[-6px] -translate-x-1/2 
-                      w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent 
-                      border-r-transparent border-t-white"
+                      className="absolute left-1/2 bottom-[-6px] 
+                        -translate-x-1/2 w-0 h-0 border-l-6 border-r-6 
+                        border-t-6 border-l-transparent 
+                        border-r-transparent border-t-white"
                     />
                   </div>
                 </div>
               ))}
             </div>
-            {selectedCompanies.length > 0 && (
+            <div className="flex flex-col items-center">
+              {selectedCompanies.length > 0 && (
+                <button
+                  onClick={() => setShowSelected(true)}
+                  className="mt-8 relative px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-medium rounded-2xl transition-all transform hover:scale-[1.02] hover:-translate-y-[2px] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
+                >
+                  <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] bg-gradient-to-r from-purple-700 to-pink-700 rounded-2xl -z-10" />
+                  <span className="leading-6">Next</span>
+                </button>
+              )}
+            </div>
+            {/* New Chat button */}
+            <div className="absolute bottom-4 left-4">
               <button
-                onClick={() => setShowSelected(true)}
-                className="mt-8 relative px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-medium rounded-xl transition-all transform hover:scale-[1.02] hover:-translate-y-[2px] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
+                onClick={handleNewChat}
+                className="px-4 py-2 bg-gradient-to-r from-gray-300 to-gray-400 text-white text-sm font-medium rounded-lg transition-all transform hover:scale-[1.02] hover:-translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
               >
-                <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] bg-gradient-to-r from-purple-700 to-pink-700 rounded-xl -z-10" />
-                Next
+                <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[4px] bg-gradient-to-r from-gray-500 to-gray-600 rounded-lg -z-10" />
+                <span className="leading-5">New Chat</span>
               </button>
-            )}
+            </div>
           </>
         )}
 
+        {/* Show selected companies */}
         {!isLoading && companies.length > 0 && showSelected && (
           <>
-            <p className="text-xl font-semibold text-gray-800 mb-8">
+            <p className="text-2xl font-semibold text-gray-800 mb-8">
               Selected Companies
             </p>
-            <div className="flex justify-center gap-8 max-w-4xl mx-auto">
+            <div className="flex justify-center gap-8 max-w-5xl mx-auto">
               {companies
                 .filter((co) => selectedCompanies.includes(co.name))
                 .map((co, index) => (
                   <div key={index} className="flex flex-col items-center">
-                    <div className="relative bg-white rounded-xl px-6 py-4 w-48 text-purple-700 font-semibold text-lg shadow-sm mb-2">
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl opacity-30 -z-10" />
+                    <div
+                      className="relative bg-white rounded-xl px-6 py-4 w-48 
+                        text-purple-700 font-semibold text-lg shadow-sm mb-2"
+                    >
+                      <div
+                        className="absolute -inset-0.5 bg-gradient-to-r 
+                          from-purple-500 to-pink-500 rounded-xl 
+                          opacity-30 -z-10"
+                      />
                       {co.name}
                     </div>
                     <span className="text-gray-600">TikToks</span>
@@ -280,18 +317,47 @@ export function AdDiscoveryForm() {
             </div>
             <button
               onClick={() => setShowSelected(false)}
-              className="mt-8 relative px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-medium rounded-xl transition-all transform hover:scale-[1.02] hover:-translate-y-[2px] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
+              className="mt-8 relative px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-medium rounded-2xl transition-all transform hover:scale-[1.02] hover:-translate-y-[2px] focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
             >
-              <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] bg-gradient-to-r from-purple-700 to-pink-700 rounded-xl -z-10" />
-              Back
+              <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] bg-gradient-to-r from-purple-700 to-pink-700 rounded-2xl -z-10" />
+              <span className="leading-6">Back</span>
+            </button>
+            {/* New Chat button */}
+            <div className="absolute bottom-4 left-4">
+              <button
+                onClick={handleNewChat}
+                className="px-4 py-2 bg-gradient-to-r from-gray-300 to-gray-400 text-white text-sm font-medium rounded-lg transition-all transform hover:scale-[1.02] hover:-translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+              >
+                <div className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[4px] bg-gradient-to-r from-gray-500 to-gray-600 rounded-lg -z-10" />
+                <span className="leading-5">New Chat</span>
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* No data + form hidden */}
+        {!isLoading && companies.length === 0 && !showForm && (
+          <>
+            <p className="text-gray-600 text-lg">No data to display yet.</p>
+            <button
+              onClick={handleNewChat}
+              className="mt-4 relative px-8 py-4 bg-gradient-to-r 
+                from-gray-300 to-gray-400 text-white text-lg font-medium 
+                rounded-xl transition-all transform hover:scale-[1.02] 
+                hover:-translate-y-[2px] focus:outline-none 
+                focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+            >
+              <div
+                className="absolute -inset-x-0.5 -inset-y-0.5 -bottom-[6px] 
+                  bg-gradient-to-r from-gray-500 to-gray-600 
+                  rounded-xl -z-10"
+              />
+              New Chat
             </button>
           </>
         )}
 
-        {!isLoading && companies.length === 0 && !showForm && (
-          <p className="text-gray-600 text-lg">No data to display yet.</p>
-        )}
-
+        {/* Prompt to fill form (initial state) */}
         {showForm && (
           <p className="text-gray-600 text-lg">
             Video previews and analysis will appear here after submission
