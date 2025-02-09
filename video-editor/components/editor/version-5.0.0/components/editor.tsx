@@ -21,7 +21,10 @@ interface EditorProps {
   recommendedOverlays: Overlay[][];
 }
 
-export const Editor: React.FC<EditorProps> = ({ setOverlays, recommendedOverlays }) => {
+export const Editor: React.FC<EditorProps> = ({
+  setOverlays,
+  recommendedOverlays,
+}) => {
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
@@ -48,8 +51,12 @@ export const Editor: React.FC<EditorProps> = ({ setOverlays, recommendedOverlays
     deleteOverlay,
     duplicateOverlay,
     splitOverlay,
-    durationInFrames,
+    durationInFrames: originalDurationInFrames,
   } = useEditorContext();
+
+  const durationInFrames = isNaN(originalDurationInFrames)
+    ? 100
+    : originalDurationInFrames;
 
   if (isMobile) {
     return (
@@ -71,7 +78,10 @@ export const Editor: React.FC<EditorProps> = ({ setOverlays, recommendedOverlays
 
   return (
     <div className="flex flex-col bg-gray-900 h-screen">
-      <EditorHeader setOverlays={setOverlays} recommendedOverlays = {recommendedOverlays}/>
+      <EditorHeader
+        setOverlays={setOverlays}
+        recommendedOverlays={recommendedOverlays}
+      />
       <div className="flex-grow flex flex-col lg:flex-row overflow-hidden ">
         <VideoPlayer playerRef={playerRef} />
       </div>

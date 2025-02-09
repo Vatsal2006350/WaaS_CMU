@@ -159,21 +159,24 @@ const RenderControls: React.FC<RenderControlsProps> = ({
       <Popover>
         <PopoverTrigger asChild>
           <Button className="bg-gray-800 hover:bg-gray-700">
-        Change Overlays
+            Change Overlays
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-48 bg-gray-900 border-gray-800">
           <div className="space-y-2">
-        <h4 className="font-medium text-zinc-100">Recommended Overlays</h4>
-        {recommendedOverlays.map((overlay: any, index: number) => (
-          <Button
-            key={index}
-            onClick={() => setOverlays([overlay])}
-            className="w-full text-left bg-gray-800 hover:bg-gray-700"
-          >
-            {overlay.name}
-          </Button>
-        ))}
+            <h4 className="font-medium text-zinc-100">Recommended Overlays</h4>
+            {recommendedOverlays.map((overlay: any, index: number) => (
+              <Button
+                key={index}
+                onClick={() => {
+                  // setOverlays([overlay]);
+                  // console.log(overlay);
+                }}
+                className="w-full text-left bg-gray-800 hover:bg-gray-700"
+              >
+                {overlay.name}
+              </Button>
+            ))}
           </div>
         </PopoverContent>
       </Popover>

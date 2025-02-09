@@ -23,41 +23,13 @@ export const useOverlays = () => {
       type: "clip",
       content:
         "https://images.pexels.com/videos/7664770/pexels-photo-7664770.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200",
-      src: "https://videos.pexels.com/video-files/7664770/7664770-hd_1280_720_25fps.mp4",
+      src: "https://videos.pexels.com/video-files/8691736/8691736-uhd_1440_2732_24fps.mp4",
       videoStartTime: 0,
       styles: {
         opacity: 1,
         zIndex: 100,
         transform: "none",
         objectFit: "cover",
-      },
-    },
-    {
-      left: 9,
-      top: 223,
-      width: 446,
-      height: 187,
-      durationInFrames: 50,
-      from: 9,
-      id: 1,
-      row: 0,
-      rotation: 0,
-      isDragging: false,
-      type: "text",
-      content: "GET CREATIVE",
-      styles: {
-        fontSize: "3rem",
-        fontWeight: "bold",
-        color: "#F4F4F5",
-        backgroundColor: "transparent",
-        fontFamily: "font-sans",
-        fontStyle: "normal",
-        textDecoration: "none",
-        lineHeight: "1.2",
-        textAlign: "center",
-        opacity: 1,
-        zIndex: 1,
-        transform: "none",
       },
     },
     {
@@ -74,7 +46,7 @@ export const useOverlays = () => {
       type: "clip",
       content:
         "https://images.pexels.com/videos/7649282/abstract-aircraft-alien-art-7649282.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200",
-      src: "https://videos.pexels.com/video-files/7649282/7649282-uhd_2560_1440_30fps.mp4",
+      src: "https://videos.pexels.com/video-files/5320011/5320011-uhd_1440_2560_25fps.mp4",
       videoStartTime: 0,
       styles: {
         opacity: 1,
@@ -95,7 +67,7 @@ export const useOverlays = () => {
       rotation: 0,
       isDragging: false,
       type: "text",
-      content: "USING THE LATEST",
+      content: "Strava",
       styles: {
         fontSize: "3rem",
         fontWeight: "bold",
@@ -125,7 +97,7 @@ export const useOverlays = () => {
       type: "clip",
       content:
         "https://images.pexels.com/videos/7180706/pexels-photo-7180706.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200",
-      src: "https://videos.pexels.com/video-files/7180706/7180706-uhd_2732_1440_25fps.mp4",
+      src: "https://videos.pexels.com/video-files/6254849/6254849-uhd_1440_2560_30fps.mp4",
       videoStartTime: 0,
       styles: {
         opacity: 1,
@@ -146,7 +118,7 @@ export const useOverlays = () => {
       rotation: 0,
       isDragging: false,
       type: "text",
-      content: "RVE VERSION 5",
+      content: "Be a Better You",
       styles: {
         fontSize: "3rem",
         fontWeight: "bold",
@@ -192,7 +164,7 @@ export const useOverlays = () => {
       rotation: 0,
       isDragging: false,
       type: "text",
-      content: "WITH VIDEO",
+      content: "Track Your Runs",
       styles: {
         fontSize: "3rem",
         fontWeight: "bold",

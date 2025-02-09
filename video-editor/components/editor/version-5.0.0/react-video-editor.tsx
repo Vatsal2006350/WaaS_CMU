@@ -29,7 +29,13 @@ interface Video {
   link: string;
 }
 
-export default function ReactVideoEditor({ recommendedOverlays, defaultVideos }: { recommendedOverlays: Overlay[][], defaultVideos: Video[] }) {
+export default function ReactVideoEditor({
+  recommendedOverlays,
+  defaultVideos,
+}: {
+  recommendedOverlays: Overlay[][];
+  defaultVideos: Video[];
+}) {
   // Overlay management hooks
   const {
     overlays,
@@ -135,7 +141,10 @@ export default function ReactVideoEditor({ recommendedOverlays, defaultVideos }:
         <EditorProvider value={editorContextValue}>
           <AppSidebar videos={defaultVideos} />
           <SidebarInset>
-            <Editor setOverlays={setOverlays} recommendedOverlays={recommendedOverlays} />
+            <Editor
+              setOverlays={setOverlays}
+              recommendedOverlays={recommendedOverlays}
+            />
           </SidebarInset>
         </EditorProvider>
       </TimelineProvider>

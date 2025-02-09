@@ -88,8 +88,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ playerRef }) => {
               compositionWidth={compositionWidth}
               compositionHeight={compositionHeight}
               style={{ width: "100%", height: "100%" }}
-              durationInFrames={PLAYER_CONFIG.durationInFrames}
-              fps={PLAYER_CONFIG.fps}
+              durationInFrames={
+                isNaN(PLAYER_CONFIG.durationInFrames)
+                  ? 100
+                  : PLAYER_CONFIG.durationInFrames
+              }
+              fps={isNaN(PLAYER_CONFIG.fps) ? 30 : PLAYER_CONFIG.fps}
               inputProps={{
                 overlays,
                 setSelectedOverlayId,

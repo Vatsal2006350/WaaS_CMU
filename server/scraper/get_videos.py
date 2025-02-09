@@ -36,14 +36,9 @@ params:
     returns: JSON object with app names as keys and an array of URLs as values.
 '''
 def get_videos(app_queries, num_each=3):
-    print("please")
     handles = []
 
-    print("appqueries")
-    print(app_queries)
     for query in app_queries:
-        print("indquery")
-        print(query)
         handle = get_tiktok_handle_serpapi(query[0], query[1])
         if handle:
             handles.append([query, handle])
@@ -52,8 +47,6 @@ def get_videos(app_queries, num_each=3):
     
     # Final URLs of all TikToks
     final_urls = {}
-
-    print(handles)
 
     # Handle_dict: [query, handle], query: [name, desc]
     for handle_dict in handles:
@@ -68,11 +61,12 @@ def get_videos(app_queries, num_each=3):
 
         for item in res:
             print(item)
-            if item['authorMeta']['name'] == handle_dict[1][1:]:
+            if 'authorMeta' in item and item['authorMeta']['name'] == handle_dict[1][1:]:
                 final_urls[handle_dict[0][0]].append(item['webVideoUrl'])
 
     return final_urls
 
+# EXAMPLE USAGE
 '''
 Returns:
 {
