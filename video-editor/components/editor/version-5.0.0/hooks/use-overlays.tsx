@@ -23,7 +23,10 @@ export const useOverlays = () => {
       type: "clip",
       content:
         "https://images.pexels.com/videos/7664770/pexels-photo-7664770.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200",
-      src: "https://videos.pexels.com/video-files/8691736/8691736-uhd_1440_2732_24fps.mp4",
+      src: [
+        "https://videos.pexels.com/video-files/8691736/8691736-uhd_1440_2732_24fps.mp4",
+        "https://videos.pexels.com/video-files/5319426/5319426-sd_360_640_25fps.mp4",
+      ][Math.floor(Math.random() * 2)],
       videoStartTime: 0,
       styles: {
         opacity: 1,
@@ -67,7 +70,7 @@ export const useOverlays = () => {
       rotation: 0,
       isDragging: false,
       type: "text",
-      content: "Strava",
+      content: "AdDojo",
       styles: {
         fontSize: "3rem",
         fontWeight: "bold",
